@@ -1,9 +1,28 @@
 ---
 title: "p8105_hw3_vdl2103"
+author: Tory Lynch
 output: github_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(p8105.datasets)
+library(tidyverse)
 ```
+
+#### Problem 1
+
+##### Load and clean data 
+```{r}
+#Load data
+data("brfss_smart2010")
+head(brfss_smart2010)
+
+#Clean data  
+brfss_data <- filter(brfss_smart2010, Topic == "Overall Health") %>% 
+  janitor::clean_names() %>% 
+  mutate(response = factor(response, c("Excellent", "Very good", "Good", "Fair", "Poor")))
+```
+
+
 
