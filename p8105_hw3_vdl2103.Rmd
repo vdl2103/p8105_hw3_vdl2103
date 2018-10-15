@@ -16,13 +16,56 @@ library(tidyverse)
 ```{r}
 #Load data
 data("brfss_smart2010")
-head(brfss_smart2010)
-
 #Clean data  
 brfss_data <- filter(brfss_smart2010, Topic == "Overall Health") %>% 
   janitor::clean_names() %>% 
   mutate(response = factor(response, c("Excellent", "Very good", "Good", "Fair", "Poor")))
 ```
 
+##### Questions and plots 
+```{r}
+states_with_7_locations <- brfss_data %>%
+  filter(year == 2002) %>% 
+  group_by(locationabbr) %>% 
+  summarise(n = sum(n_distinct(geo_location))) %>% 
+  filter(n > 6)
 
+knitr::kable(states_with_7_locations, caption = "States with more than 7 locations in 2002")
+```
+
+The states with more than 7 locations in 2002 are Connecticut, Florida, Massachusetts, North Carolina, New Jersey and Pennsylvania. 
+
+```{r}
+locations_per_state <- brfss_data %>%
+  group_by(locationabbr, year) %>% 
+  summarise(n = sum(n_distinct(geo_location))) 
+
+plot_locations_per_state <-  ggplot(locations_per_state, aes(x = year, y = n, group = locationabbr, 
+                            color = factor(locationabbr))) + geom_point() + geom_line()
+```
+
+
+```{r}
+prop_excellent_table <- brfss_data %>% 
+  filter(year %in% c(2002, 2006, 2010)) %>% 
+  filter(locationabbr == "NY" & response == "Excellent") %>% 
+  group_by(year) %>% 
+  summarise(n = mean(data_value), sd = sd(data_value))
+  
+  knitr::kable(prop_excellent_table, caption = "Mean and Standard Deviation of Respondents Reporting 
+               Excellent Health in New York in 2002, 2006, 2010")
+```
+
+```{r}
+
+```
+
+
+
+#### Question 2 
+
+##### Import data
+```{r}
+data("instacart")
+```
 
