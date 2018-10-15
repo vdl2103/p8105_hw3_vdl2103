@@ -116,11 +116,38 @@ apples_and_coffee_table <- instacart %>%
 
 #### Problem 3 
 
+##### Data import
 ```{r}
 data("ny_noaa")
 dim(ny_noaa)
 skimr::skim(ny_noaa)
 colMeans(is.na(ny_noaa))
+```
+
+##### Data cleaning 
+```{r}
+noaa_data_cleaned <- ny_noaa %>% 
+  separate(date, c("y","m", "d")) %>% 
+  mutate(prcp_mm = prcp/10) %>%  #put precip into mm 
+  mutate(tmax_c = as.numeric(tmax)/10) %>% 
+  mutate(tmin_c = as.numeric(tmin)/10)
+
+ggplot(noaa_data_cleaned, aes(x = snow)) + geom_histogram(binwidth = 30) + xlim(c(0,1000))
+```
+
+```{r}
+max_temp_jan_july <- noaa_data_cleaned %>% 
+  filter(m %in% c("01","07")) %>% 
+  select(1:3, 11) %>% 
+  group_by(id, y, m) %>% 
+  summarise(n = mean(tmax_c)) 
+  
+ggplot(max_temp_jan_july, aes(x = y, y = n, color = id)) + 
+        geom_point() + 
+        geom_line() + 
+        facet_grid(. ~ m) + 
+        theme(legend.position = "none")
+  
 ```
 
 
