@@ -57,7 +57,22 @@ prop_excellent_table <- brfss_data %>%
 ```
 
 ```{r}
+five_panel <- brfss_data %>% 
+  select(1:3, 7, 9) %>% 
+  spread(response, data_value) %>% 
+  janitor::clean_names() %>% 
+  group_by(year, locationabbr) %>% 
+  summarise(excellent_n = mean(excellent), 
+            v_good_n = mean(very_good), 
+            good_n = mean(good), 
+            fair_n = mean(fair), 
+            poor_n = mean(poor)) %>% 
+gather("response", "data_value", 3:7)
 
+ggplot(five_panel, aes(x = year, y = data_value, color = locationabbr)) + 
+        geom_point() + 
+        geom_line() + 
+        facet_grid(. ~ response)
 ```
 
 
