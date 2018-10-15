@@ -76,11 +76,32 @@ ggplot(five_panel, aes(x = year, y = data_value, color = locationabbr)) +
 ```
 
 
-
 #### Question 2 
 
 ##### Import data
 ```{r}
 data("instacart")
+```
+
+```{r}
+n_distinct(instacart$aisle_id)
+
+max_aisles <- instacart %>% 
+  group_by(aisle, department_id) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+print(max_aisles[1:10,])
+
+ggplot(instacart, aes(x = aisle_id, fill = department)) + geom_histogram(position = "dodge", binwidth = 30)
+```
+
+```{r}
+popular_items_table <- instacart %>% 
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
+  group_by(aisle, product_name) %>% 
+  count() %>% 
+  group_by(aisle) %>% 
+  top_n(n = 1)
 ```
 
