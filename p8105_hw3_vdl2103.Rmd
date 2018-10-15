@@ -81,6 +81,7 @@ ggplot(five_panel, aes(x = year, y = data_value, color = locationabbr)) +
 ##### Import data
 ```{r}
 data("instacart")
+dim(instacart)
 ```
 
 ```{r}
@@ -104,4 +105,22 @@ popular_items_table <- instacart %>%
   group_by(aisle) %>% 
   top_n(n = 1)
 ```
+
+```{r}
+apples_and_coffee_table <- instacart %>% 
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>% 
+  group_by(product_name, order_dow) %>% 
+  summarise(n = mean(order_hour_of_day)) %>% 
+  spread(order_dow, n)
+```
+
+#### Problem 3 
+
+```{r}
+data("ny_noaa")
+dim(ny_noaa)
+skimr::skim(ny_noaa)
+colMeans(is.na(ny_noaa))
+```
+
 
