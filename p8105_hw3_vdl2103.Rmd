@@ -6,7 +6,7 @@ output: github_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  fig.width = 6,
+  fig.width = 8,
   fig.asp = .6,
   out.width = "90%"
 )
@@ -29,40 +29,54 @@ brfss_data <- filter(brfss_smart2010, Topic == "Overall Health") %>%
 ```
 
 ##### Questions and plots 
-```{r}
+The states with more than 7 locations in 2002 are Connecticut, Florida, Massachusetts, North Carolina, New Jersey and Pennsylvania. 
+```{r, echo = FALSE}
+#Identifying states with seven locations in 2002 
 states_with_7_locations <- brfss_data %>%
   filter(year == 2002) %>% 
   group_by(locationabbr) %>% 
   summarise(n = sum(n_distinct(geo_location))) %>% 
   filter(n > 6)
 
-knitr::kable(states_with_7_locations, caption = "States with more than 7 locations in 2002")
+#Table for states with 7+ locations 
+knitr::kable(states_with_7_locations, col.names = c("State", "Number of locations"))
 ```
 
-The states with more than 7 locations in 2002 are Connecticut, Florida, Massachusetts, North Carolina, New Jersey and Pennsylvania. 
+The spaghetti plot shows that most states had around 5 locations per year and that more populated states, like New Jersey, North Carolina and Texas, typically maxed out between 15 - 19. The clear exceptions are in Florida, which had 44 and 41 locations in 2007 and 2010, respectively. This plot is not the ideal way to view this information because the colors are associated with the alphabetical ordering of the states, and thus do not give any additional information. It would be more helpful if they were color-coded by region, population size or some other variable of interest. 
 
-```{r}
+```{r, echo = FALSE}
+#Table for number of locations per state 
 locations_per_state <- brfss_data %>%
   group_by(locationabbr, year) %>% 
-  summarise(n = sum(n_distinct(geo_location))) 
+  summarise(n = sum(n_distinct(geo_location))) %>% 
+  mutate(location = locationabbr)
 
-plot_locations_per_state <-  ggplot(locations_per_state, aes(x = year, y = n, group = locationabbr, 
-                            color = factor(locationabbr))) + geom_point() + geom_line()
+#Plot for number of locations per state 
+ggplot(locations_per_state, aes(x = year, y = n, group = location, 
+                       color = factor(location))) + 
+                       geom_point() +
+                       geom_line() + 
+                       theme(legend.position = "right") +
+                       labs(x = "Year", y = "Number of locations", 
+                            title = "Number of BRFSS Locations per State, 2002 - 2010", color = "States") +
+                       theme(legend.text = element_text(size = 8)) + 
+                       theme(plot.title = element_text(hjust = 0.4))
 ```
 
-
-```{r}
+There was a slight overall decrease in the average proportion of "Excellent" responses in New York State between 2002 and 2010. The proportion was lower in both 2006 and 2010, and the difference between those two years was slight (~0.17%).  
+```{r, echo = FALSE}
+#Proportion of "Excellent" responses in 2002, 2006, 2010 in New York 
 prop_excellent_table <- brfss_data %>% 
   filter(year %in% c(2002, 2006, 2010)) %>% 
   filter(locationabbr == "NY" & response == "Excellent") %>% 
   group_by(year) %>% 
   summarise(n = mean(data_value), sd = sd(data_value))
   
-  knitr::kable(prop_excellent_table, caption = "Mean and Standard Deviation of Respondents Reporting 
-               Excellent Health in New York in 2002, 2006, 2010")
+knitr::kable(prop_excellent_table, col.names = c("Year", "Mean", "Std. Deviation"))
 ```
 
-```{r}
+This five-panel plot shows that on average "Very Good" makes up the highest proportion of responses, followed by "Good" and "Excellent". It is difficult to identify trends in individual states because there are too many states included in each plot. I included smoothing lines to give a better sense of the change in response proportions over time, but they only marginally improved the clarity of the figure. The purpose of the five-panel plot is to demonstrate broad trends in the proportion of responses over time, and not to make specific comparisons beteween states or to gain state-level insight. 
+```{r, echo = FALSE, warning=FALSE}
 five_panel <- brfss_data %>% 
   select(1:3, 7, 9) %>% 
   spread(response, data_value) %>% 
@@ -76,72 +90,110 @@ five_panel <- brfss_data %>%
 gather("response", "data_value", 3:7)
 
 ggplot(five_panel, aes(x = year, y = data_value, color = locationabbr)) + 
-        geom_point() + 
+        geom_point(alpha = 0.4) + 
         geom_line() + 
-        facet_grid(. ~ response)
-```
+        geom_smooth(se = FALSE) +
+        facet_grid(. ~ response) +
+        labs(x = "Year", y = "Average Proportion of Responses", color = "States", 
+             title = "Average Proportion of Responses to Overall Health Questions on BRFSS, 2002 - 2010") +
+        theme(legend.text = element_text(size = 6)) +
+        guides(col = guide_legend(ncol = 12)) +
+        theme(legend.position = "bottom")
 
+```
 
 #### Question 2 
-
-##### Import data
-```{r}
+```{r, echo = FALSE}
 data("instacart")
-dim(instacart)
+instacart_dim <- dim(instacart)
+#Number of aisles
+num_aisles <- n_distinct(instacart$aisle_id)
 ```
+##### Description of dataset 
+The instacart dataset contains the details of 131,209 grocery store orders from a range of grocery stores, including over 1.3 million observations about specific grocery items; the size of the dataset is 1,384,617 observations x 15 variables. The dataset enables us to see when the items were purchased (day of the week, hour of the day etc.), in what order they were added to the cart, how many times the user has used the service and how long it had been since the last order. It also includes specific information about the items, including the brands, the department that covers the items and where they are found in the store. These data provide insight into the shopping behavior of buyers (i.e. what items are purchased together, at what time of day etc.) and may inform grocery store managers about what items to stock and how to efficiently organize and pack items. For example, if users reguarly buy milk, cereal and bananas together, then it could help improve delivery time if those items were stored near each other or overseen by the same department. 
 
-```{r}
-n_distinct(instacart$aisle_id)
+There are `r num_aisles` aisles and most items are ordered from the fresh vegetables and fresh fruits aisles. 
 
+##### Tables and Plots
+```{r, echo=FALSE}
+#Number of purchases per aisle
 max_aisles <- instacart %>% 
   group_by(aisle, department_id) %>% 
   count() %>% 
-  arrange(desc(n))
+  arrange(desc(n)) %>% 
+  head(10)
 
-print(max_aisles[1:10,])
-
-ggplot(instacart, aes(x = aisle_id, fill = department)) + geom_histogram(position = "dodge", binwidth = 30)
+#Table of purchases per aisle 
+knitr::kable(max_aisles, col.names = c("Aisle", "Dept. ID", "Number of Items Ordered"))
 ```
 
-```{r}
+I colored the number of items purchased per aisle by department ID because it is clearer than trying to put labels on 134 aisles on one plot. The plot shows that, as described in the above table, most orders are for items in the fresh and packaged fruits and vegetable aisles (dept. 4, which is bright pink in the plot). Aisles with dairy products, like yogurt, milk and pacakged cheese, comprise the next group of most ordered items (dept. 16, bright green). The plot shows that there is a rough pattern to the aisles, with bakery/breakfast/ beverage aisles clumped together, then dairy, then meat/seafood/frozen, then a small number from pantry/personal care, and finally the peak at produce. This pattern repeats three times, which could indicate that the different grocery stores have their aisles organized in a similar manner (assuming that aisle numbers correspond to physical proximity within the store). 
+```{r, echo = FALSE}
+#Plot of purchases per aisle
+ggplot(instacart, aes(x = aisle_id, fill = department)) + 
+            geom_histogram(position = "dodge", binwidth = 30) + 
+            labs(x = "Aisle Number", y = "Count", fill  = "Department", 
+                 title = "Number of Items Purchased by Aisle and Department") +
+            theme(plot.title = element_text(hjust = 0.5)) +
+            theme(legend.text.align = 0) + 
+            xlim(c(0, 140))
+```
+
+
+This table shows that there are large differences in the actual number of popular items ordered among the packaged produce, baking ingredients and dog food care aisles. This suggests that popularity relative to other items in an aisle is not a good indicator of how frequently a given item is purchased. 
+```{r, echo = FALSE}
+#Table of most popular items in specific aisles
 popular_items_table <- instacart %>% 
   filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
   group_by(aisle, product_name) %>% 
   count() %>% 
   group_by(aisle) %>% 
   top_n(n = 1)
+knitr::kable(max_aisles, col.names = c("Aisle", "Product Name", "Number of Items Ordered"))
 ```
 
-```{r}
+I assumed that the day of the week variable (0 - 6) mapped to Sunday - Saturday and recoded the variable names to reflect the actual day. This table shows that coffee ice cream and Pink Lady apples are often purchased within 3 hours of each other, particularly over the weekend (Friday - Sunday). Coffee ice cream is purchased later in the day, on average, compared to the apples; this is consistent with the write up on the Instacart dataset website, which states that ice cream is one of the most frequently ordered items later in the day. 
+```{r, echo = FALSE}
+#Table of popular items in baking, dog food and packaged vegetable aisles 
 apples_and_coffee_table <- instacart %>% 
   filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>% 
   group_by(product_name, order_dow) %>% 
   summarise(n = mean(order_hour_of_day)) %>% 
   spread(order_dow, n)
+knitr::kable(apples_and_coffee_table, col.names = c("Product", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", 
+                                                    "Friday", "Saturday"))
 ```
 
-#### Problem 3 
+#### Problem 3
 
-##### Data import
-```{r}
+##### Description of dataset
+This dataset contains temperature and precipitation information from 747 NOAA stations in New York between 1981 and 2010. It has 2,595,176 observations of seven variables. During this time period, the NOAA sites recorded the minimum and maximum temperature, amount of precipitation and the amount/ accumulation of snowfall for most days. The data include many NA values, which reflect the fact that each site did not record all of these variables all of the time. While the precipitation data is relativley complete (5.6% NAs), 43.7% of the values for maximum and minimum temperature are missing. The snow and snow depth variables are missing from 14.7% and 22.8%, respectively, of the observations. 
+```{r, echo = FALSE}
 data("ny_noaa")
 dim(ny_noaa)
-skimr::skim(ny_noaa)
+
+#Percent of each column that is NA
 colMeans(is.na(ny_noaa))
 ```
 
-##### Data cleaning 
-```{r}
+##### Plots 
+The most commonly observed value for snowfall is zero, which makes sense given that it does not snow on the majority of days in New York. While some parts of the state experience very heavy snow, particularly around the Great Lakes, snow is typically confined to 3 - 4 months of the year and is sporadic, even during the winter. 
+```{r, echo=FALSE, warning=FALSE}
 noaa_data_cleaned <- ny_noaa %>% 
   separate(date, c("y","m", "d")) %>% 
   mutate(prcp_mm = prcp/10) %>%  #put precip into mm 
   mutate(tmax_c = as.numeric(tmax)/10) %>% 
   mutate(tmin_c = as.numeric(tmin)/10)
 
-ggplot(noaa_data_cleaned, aes(x = snow)) + geom_histogram(binwidth = 30) + xlim(c(0,1000))
+ggplot(noaa_data_cleaned, aes(x = snow)) + 
+    geom_histogram(binwidth = 30) + 
+    xlim(c(0,1000)) + ylim(c(0,100000)) +
+    labs(x = "Snowfall(mm)", y = "Count", title = "Histogram of Amount of Snowfall in NY, 1981 - 2010 (NOAA)") +
+    theme(plot.title = element_text(hjust = 0.5))
 ```
 
-```{r}
+This two-panel plot shows that there is a substantial difference in average maximum temperature in January (01) and July (07) in New York. There is a 10-20 degree increase in max. average temperature in July, though there also appear to be more outliers in the summer. The July time-series shows five very clear, unseasonably cold months and several more borderline outliers; the winter time-series has two obvious outliers of extremely cold average max. temperature. These data do not reveal a strong general change in average max temperature between 1981 and 2010, though we cannot identify changes over time at specific sites on these plots. 
+```{r, echo=FALSE, warning=FALSE}
 max_temp_jan_july <- noaa_data_cleaned %>% 
   filter(m %in% c("01","07")) %>% 
   select(1:3, 11) %>% 
@@ -152,15 +204,26 @@ ggplot(max_temp_jan_july, aes(x = y, y = n, color = id)) +
         geom_point() + 
         geom_line() + 
         facet_grid(. ~ m) + 
-        theme(legend.position = "none")
+        theme(legend.position = "none") + 
+        labs(x = "Year", y = "Temperature (degrees Celsius)", 
+             title = "Average Max. Temperature in January and July in New York State (NOAA)") +
+        theme(plot.title = element_text(hjust = 0.5)) +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1))
   
 ```
 
-```{r}
-max_vs_min_plot <- ggplot(noaa_data_cleaned, aes(x = tmax_c, y = tmin_c)) + geom_hex()
-snow_dist_plot <- ggplot(noaa_data_cleaned, aes(x = snow, y = y)) + geom_density_ridges() + xlim(c(1,100))
+The max. vs min. plot reveals some observations that are almost certainly errors. It is unlikely, for example, that there was a 16-day period in August of 2008 where the maximum and minimum temperatures each day were 60 degrees Celsius (140 degrees Fahrenheit). The distribution plot shows consistent trends in the amount of snowfall, with most snowfall in the 0 - 25 mm range, and then blips at ~50mm and ~75mm. This plot is not espeically clear because there are 30 distributions in one figure, but the general trends are apparent. I tested violin plots and other density plots, but did not think they were clearer. 
+```{r, echo=FALSE, warning=FALSE}
+max_vs_min_plot <- ggplot(noaa_data_cleaned, aes(x = tmax_c, y = tmin_c)) + 
+    geom_hex() +
+    labs(x = "Max. Temp", y = "Min. Temp", title = "Plot of Min. vs Max. Temp in NY between\n1981 - 2010 (NOAA)")
+
+snow_dist_plot <- ggplot(noaa_data_cleaned, aes(x = snow, y = y)) + 
+    geom_density_ridges() + 
+    xlim(c(1,100)) +
+    labs(x = "Snowfall (mm)", y = "Year", title = "Distribution of Snowfall values in NY between\n1981 = 2010 (NOAA)")
+
 snow_dist_plot_violin <- ggplot(noaa_data_cleaned, aes(x = y, y = snow)) + geom_violin(aes(fill = y)) + stat_summary(fun.y = median, geom = "point", color = "black", size = 1) + ylim(c(1,100)) + theme(legend.position = "none")
 
 max_vs_min_plot + snow_dist_plot
 ```
-
